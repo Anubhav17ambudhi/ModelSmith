@@ -12,6 +12,6 @@ async def connect_to_mongo():
 async def close_mongo_connection():
     if db.client:
         db.client.close()
-
+    
 def get_database():
     return db.client[settings.DATABASE_NAME]

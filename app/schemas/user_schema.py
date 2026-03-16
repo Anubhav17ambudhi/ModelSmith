@@ -5,7 +5,7 @@ class UserRegister(BaseModel):
     """Schema for validating user registration payload."""
     username: str
     email: EmailStr
-    password: str
+    password: str = Field(..., min_length=6, max_length=72)
 
 class UserLogin(BaseModel):
     """Schema for validating user login payload (if not using OAuth2 form data directly)."""
