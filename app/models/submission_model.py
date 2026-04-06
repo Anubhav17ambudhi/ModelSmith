@@ -2,16 +2,13 @@ from pydantic import BaseModel, Field
 from datetime import datetime
 from typing import Optional
 
-class DatasetModel(BaseModel):
-    """
-    Dataset metadata document in 'datasets' collection.
-    """
+class SubmissionModel(BaseModel):
     id: Optional[str] = Field(alias="_id", default=None)
     user_id: str
-    dataset_name: str
-    storage_url: str
-    file_type: str
+    dataset_url: str
     target_column: str
+    use_case: str
+    requirement: str
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
     model_config = {
