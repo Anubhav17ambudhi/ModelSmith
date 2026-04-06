@@ -9,6 +9,9 @@ class SubmissionModel(BaseModel):
     target_column: str
     use_case: str
     requirement: str
+    status: str = Field(default="pending") # pending, training, completed, failed
+    model_artifact: Optional[bytes] = None
+    model_config_json: Optional[dict] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
     model_config = {

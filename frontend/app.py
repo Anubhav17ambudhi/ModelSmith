@@ -83,7 +83,11 @@ with st.sidebar:
                 if res.status_code == 201:
                     st.success("Registered successfully! Please login.")
                 else:
-                    st.error(res.json().get("detail", "Registration failed."))
+                    try:
+                        error_msg = res.json().get("detail", "Registration failed.")
+                    except ValueError:
+                        error_msg = f"Registration failed. Server returned {res.status_code}"
+                    st.error(error_msg)
 
 # ----------------- MAIN APP -----------------
 st.markdown("<h1 class='main-header'>Neural Network Project Request Hub</h1>", unsafe_allow_html=True)
@@ -91,39 +95,95 @@ st.markdown("<h1 class='main-header'>Neural Network Project Request Hub</h1>", u
 if not st.session_state.access_token:
     st.info("### 👋 Welcome! \nPlease log in using the sidebar on the left to submit your dataset and requirements.")
 else:
-    st.markdown("### 📤 Upload Your Dataset & Requirements")
-    st.write("Fill out the details below to define the architecture and expectations you have from the model.")
+    tab1, tab2 = st.tabs(["🚀 Submit New Request", "📂 My Submissions"])
     
-    with st.container():
-        with st.form("submission_form", border=True):
-            dataset_file = st.file_uploader("Upload Dataset (CSV limits apply)", type=["csv", "txt"])
-            target_column = st.text_input("🎯 Target Column Name", placeholder="e.g. Sales, Price, Quality")
-            use_case = st.text_area("💼 Use Case Description", placeholder="Describe the business scenario where this model will be used.")
-            requirement = st.text_area("📋 Specific Requirements", placeholder="List any particular nuances needed in the model output or architecture.")
-            
-            submitted = st.form_submit_button("Submit Request 🚀")
-            
-            if submitted:
-                if not dataset_file or not target_column or not use_case or not requirement:
-                    st.error("⚠️ Please fill out all fields and upload a dataset.")
+    with tab1:
+        st.markdown("### 📤 Upload Your Dataset & Requirements")
+        st.write("Fill out the details below to define the architecture and expectations you have from the model.")
+        
+        with st.container():
+            with st.form("submission_form", border=True):
+                dataset_file = st.file_uploader("Upload Dataset (CSV limits apply)", type=["csv", "txt"])
+                target_column = st.text_input("🎯 Target Column Name", placeholder="e.g. Sales, Price, Quality")
+                use_case = st.text_area("💼 Use Case Description", placeholder="Describe the business scenario where this model will be used.")
+                requirement = st.text_area("📋 Specific Requirements", placeholder="List any particular nuances needed in the model output or architecture.")
+                
+                submitted = st.form_submit_button("Submit Request 🚀")
+                
+                if submitted:
+                    if not dataset_file or not target_column or not use_case or not requirement:
+                        st.error("⚠️ Please fill out all fields and upload a dataset.")
+                    else:
+                        with st.spinner("⏳ Uploading directly to Cloudinary and securing metadata... (this may take a few moments)"):
+                            # Prepare the multipart payload
+                            files = {"dataset": (dataset_file.name, dataset_file, dataset_file.type)}
+                            data = {
+                                "target_column": target_column,
+                                "use_case": use_case,
+                                "requirement": requirement
+                            }
+                            
+                            try:
+                                # Send to FastAPI
+                                res = requests.post(f"{API_URL}/submit/", headers=get_headers(), files=files, data=data)
+                                if res.status_code == 200:
+                                    st.success("🎉 Successfully submitted request! Your dataset is backed up securely to Cloudinary.")
+                                    st.json(res.json())
+                                    st.balloons()
+                                else:
+                                    st.error(f"❌ Error submitting request: {res.text}")
+                            except requests.exceptions.ConnectionError:
+                                st.error("🔌 Could not connect to the Backend API. Ensure it is running on port 8000.")
+
+    with tab2:
+        st.markdown("### 📊 My Past Submissions")
+        btn_col, _ = st.columns([1, 4])
+        if btn_col.button("🔄 Refresh"):
+            st.rerun()
+
+        try:
+            res = requests.get(f"{API_URL}/submit/", headers=get_headers())
+            if res.status_code == 200:
+                submissions = res.json()
+                if not submissions:
+                    st.info("You haven't submitted any datasets yet.")
                 else:
-                    with st.spinner("⏳ Uploading directly to Cloudinary and securing metadata... (this may take a few moments)"):
-                        # Prepare the multipart payload
-                        files = {"dataset": (dataset_file.name, dataset_file, dataset_file.type)}
-                        data = {
-                            "target_column": target_column,
-                            "use_case": use_case,
-                            "requirement": requirement
-                        }
+                    for sub in sorted(submissions, key=lambda x: x.get('created_at', ''), reverse=True):
+                        # Ensure we always stringify _id reliably for keys
+                        sub_id = str(sub.get('_id', sub.get('id', ''))) 
+                        status = sub.get('status', 'pending')
                         
-                        try:
-                            # Send to FastAPI
-                            res = requests.post(f"{API_URL}/submit/", headers=get_headers(), files=files, data=data)
-                            if res.status_code == 200:
-                                st.success("🎉 Successfully submitted request! Your dataset is backed up securely to Cloudinary.")
-                                st.json(res.json())
-                                st.balloons()
-                            else:
-                                st.error(f"❌ Error submitting request: {res.text}")
-                        except requests.exceptions.ConnectionError:
-                            st.error("🔌 Could not connect to the Backend API. Ensure it is running on port 8000.")
+                        with st.expander(f"Dataset: {sub['target_column']} | Status: {status.upper()}"):
+                            st.write(f"**Use Case:** {sub['use_case']}")
+                            st.write(f"**Requirement:** {sub['requirement']}")
+                            st.write(f"**Dataset URL:** [Download Data]({sub['dataset_url']})")
+                            st.write(f"**Submitted At:** {sub['created_at']}")
+                            
+                            if status in ['pending', 'failed']:
+                                if st.button("🚀 Train Model", key=f"train_{sub_id}"):
+                                    t_res = requests.post(f"{API_URL}/submit/{sub_id}/train", headers=get_headers())
+                                    if t_res.status_code == 200:
+                                        st.success("Training started in the background! Please refresh the page in a few minutes.")
+                                    else:
+                                        st.error(f"Error starting training: {t_res.text}")
+                            
+                            elif status == 'training':
+                                st.info("⏳ Model is currently training...")
+                                
+                            elif status == 'completed':
+                                st.success("✅ Training Completed")
+                                d_res = requests.get(f"{API_URL}/submit/{sub_id}/download", headers=get_headers())
+                                if d_res.status_code == 200:
+                                    st.download_button(
+                                        label="📦 Download Trained Model & Config ZIP",
+                                        data=d_res.content,
+                                        file_name=f"{sub['target_column'].replace(' ', '_').lower()}_artifacts.zip",
+                                        mime="application/zip",
+                                        key=f"download_{sub_id}"
+                                    )
+                                else:
+                                    st.error("Model artifacts not available right now.")
+            else:
+                st.error("Failed to load submissions.")
+        except requests.exceptions.ConnectionError:
+            st.error("🔌 Could not connect to the Backend API. Ensure it is running on port 8000.")

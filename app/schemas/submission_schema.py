@@ -8,6 +8,7 @@ class SubmissionResponse(BaseModel):
     target_column: str
     use_case: str
     requirement: str
+    status: str
     created_at: datetime
 
     model_config = {

@@ -4,6 +4,7 @@ import io
 import pandas as pd
 from fastapi import UploadFile, HTTPException
 from motor.motor_asyncio import AsyncIOMotorDatabase
+from bson import ObjectId
 from app.models.submission_model import SubmissionModel
 from app.schemas.submission_schema import SubmissionResponse
 from app.utils.pipeline import SmartAutoPipeline
@@ -89,3 +90,31 @@ class SubmissionService:
         
         sub_dict["_id"] = str(result.inserted_id)
         return SubmissionResponse(**sub_dict)
+
+    async def get_user_submissions(self, user_id: str) -> list[SubmissionResponse]:
+        cursor = self.collection.find({"user_id": user_id})
+        submissions = await cursor.to_list(length=100)
+        return [SubmissionResponse(**{**sub, "_id": str(sub["_id"])}) for sub in submissions]
+
+    async def get_submission(self, submission_id: str) -> dict:
+        try:
+            sub = await self.collection.find_one({"_id": ObjectId(submission_id)})
+            return sub
+        except Exception:
+            return None
+
+    async def update_submission_status(self, submission_id: str, status: str):
+        await self.collection.update_one(
+            {"_id": ObjectId(submission_id)},
+            {"$set": {"status": status}}
+        )
+
+    async def save_trained_model(self, submission_id: str, model_bytes: bytes, config_dict: dict):
+        await self.collection.update_one(
+            {"_id": ObjectId(submission_id)},
+            {"$set": {
+                "status": "completed",
+                "model_artifact": model_bytes,
+                "model_config_json": config_dict
+            }}
+        )
