@@ -8,7 +8,7 @@ class ModelConfigModel(BaseModel):
     """
     id: Optional[str] = Field(alias="_id", default=None)
     user_id: str
-    config_name: str
+    model_name: str
     task_type: str
     architecture: List[Dict[str, Any]]
     hyperparameters: Dict[str, Any]

@@ -14,7 +14,7 @@ class ModelConfigResponse(BaseModel):
     """Schema for returning a model configuration."""
     id: str
     user_id: str
-    config_name: str
+    model_name: str
     task_type: str
     architecture: List[Dict[str, Any]]
     hyperparameters: Dict[str, Any]

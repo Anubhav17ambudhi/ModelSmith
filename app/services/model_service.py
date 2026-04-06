@@ -11,22 +11,27 @@ class ModelService:
     async def create_model_config(self, user_id: str, config_data: ModelConfigCreate) -> ModelConfigResponse:
         new_config = ModelConfigModel(
             user_id=user_id,
-            config_name=config_data.model_name,
+            model_name=config_data.model_name,
             task_type=config_data.task_type,
             architecture=config_data.architecture,
             hyperparameters=config_data.hyperparameters
         )
-        
+
         config_dict = new_config.model_dump(by_alias=True, exclude_none=True)
+
         result = await self.collection.insert_one(config_dict)
-        
+
         config_dict["_id"] = str(result.inserted_id)
+
+        # ✅ FIX
+        config_dict["id"] = config_dict.pop("_id")
+
         return ModelConfigResponse(**config_dict)
 
     async def get_user_models(self, user_id: str) -> List[ModelConfigResponse]:
         cursor = self.collection.find({"user_id": user_id})
         models = []
         async for doc in cursor:
-            doc["_id"] = str(doc["_id"])
+            doc["id"] = str(doc["_id"])
             models.append(ModelConfigResponse(**doc))
         return models
