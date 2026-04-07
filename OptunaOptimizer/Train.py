@@ -6,7 +6,6 @@ import numpy as np
 from sklearn.metrics import mean_squared_error
 import copy
 
-# YAHAN FIX HAI: DynamicMLP class ko import karna zaroori hai
 from OptunaOptimizer.MLP import DynamicMLP
 
 # =============================================================================
@@ -21,7 +20,7 @@ def train_and_evaluate_final_model(best_params, X_train, y_train, X_test, y_test
     print("\n=== STARTING FINAL MODEL TRAINING ===")
     print("Using Hyperparameters:", best_params)
 
-    # 1. Prepare Data & Device (GPU FIX APPLIED)
+    # 1. Prepare Data & Device 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Training on device: {device}")
 
@@ -40,7 +39,7 @@ def train_and_evaluate_final_model(best_params, X_train, y_train, X_test, y_test
     model = DynamicMLP(input_dim, output_dim, best_params).to(device)
     criterion = nn.MSELoss()
 
-    # 3. Setup Optimizer (SGD SUPPORT ADDED)
+    # 3. Setup Optimizer 
     if best_params["optimizer"] == "adam":
         optimizer = optim.Adam(model.parameters(), lr=best_params["learning_rate"],
                                weight_decay=best_params["weight_decay"], betas=(best_params["beta1"], 0.999))

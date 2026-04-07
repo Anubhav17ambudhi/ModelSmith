@@ -43,7 +43,7 @@ OTHER CONSTRAINTS:
    - optimizer choices: ["adam", "adamw","SGD"]
    - scheduler choices: ["none", "cosine"]
    - dropout_rate: medium/high noise → low=0.2, high=0.5 | low noise → low=0.1, high=0.3
-   - epochs: low=30, high=80
+   - epochs: low=30, high=150
    - early_stopping_patience: low=5, high=12
    - grad_clip: low=0.5, high=3.0
 
@@ -95,7 +95,7 @@ Only use valid keys: "type", "low", "high", "choices", "log". NEVER use "_type" 
                 "beta1":                   {"type": "float",       "low": 0.85, "high": 0.99},
                 "learning_rate":           {"type": "float",       "low": 1e-5, "high": 1e-2, "log": True},
                 "batch_size":              {"type": "categorical", "choices": [64, 128, 256]},
-                "epochs":                  {"type": "int",         "low": 30,   "high": 80},
+                "epochs":                  {"type": "int",         "low": 30,   "high": 150},
                 "early_stopping_patience": {"type": "int",         "low": 5,    "high": 12},
                 "grad_clip":               {"type": "float",       "low": 0.5,  "high": 3.0},
                 "scheduler":               {"type": "categorical", "choices": ["none", "cosine"]},
@@ -196,7 +196,7 @@ Only use valid keys: "type", "low", "high", "choices", "log". NEVER use "_type" 
             ss["weight_init"]["choices"] = ["kaiming", "xavier"]
 
         ss["epochs"]["low"]  = max(30, ss["epochs"].get("low", 30))
-        ss["epochs"]["high"] = min(80, ss["epochs"].get("high", 80))
+        ss["epochs"]["high"] = min(150, ss["epochs"].get("high", 150))
 
         ss["early_stopping_patience"]["low"]  = max(5,  ss["early_stopping_patience"].get("low", 5))
         ss["early_stopping_patience"]["high"] = min(12, ss["early_stopping_patience"].get("high", 12))

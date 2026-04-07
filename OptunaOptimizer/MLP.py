@@ -183,7 +183,7 @@ def create_objective(X_train, y_train, X_val, y_val, input_state, final_space):
             model.eval()
             val_mse_sum = 0.0
             with torch.no_grad():
-                # Validation data ko memory bachane ke liye batches mein process karein
+                
                 for i in range(0, len(X_val_t), params["batch_size"]):
                     v_batch_X = X_val_t[i : i + params["batch_size"]].to(device)
                     v_batch_y = y_val_t[i : i + params["batch_size"]].cpu().numpy()
