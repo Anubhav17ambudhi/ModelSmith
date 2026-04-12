@@ -7,6 +7,7 @@ import os
 import json
 import torch
 import optuna
+import sys
 from dotenv import load_dotenv
 
 # Apne banaye hue modules se functions import kar rahe hain
@@ -19,11 +20,12 @@ from OptunaOptimizer.SaveModel import test_saved_model  # <--- NAYA IMPORT
 
 # .env file se API key load karne ke liye
 load_dotenv()
+sys.stdout.reconfigure(encoding='utf-8')
 
-def start_automl(csv_path, target, use_case, user_req):
+def start_automl(csv_path, target, use_case, user_req,sub_id):
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
-        print("❌ ERROR: GEMINI_API_KEY not found in .env file! Please add it.")
+        print("ERROR: GEMINI_API_KEY not found in .env file! Please add it.")
         return
         
     print(f"\n🚀 Starting AutoML Pipeline for Target: '{target}'")
@@ -47,10 +49,10 @@ def start_automl(csv_path, target, use_case, user_req):
     model, score = train_and_evaluate_final_model(study.best_params, X_train, y_train, X_test, y_test, input_state)
     
     # 6. Saving (Exporting artifacts)
-    print("\n💾 Exporting Model Artifacts...")
+    print("\nExporting Model Artifacts...")
     safe_name = target.replace(" ", "_").lower()
-    model_save_path = f"{safe_name}_best_model.pth"
-    config_save_path = f"{safe_name}_model_config.json"
+    model_save_path = f"{sub_id}_best_model.pth"
+    config_save_path = f"{sub_id}_model_config.json"
 
     # PyTorch weights save karein
     torch.save(model.state_dict(), model_save_path)
@@ -63,8 +65,8 @@ def start_automl(csv_path, target, use_case, user_req):
     with open(config_save_path, "w") as f:
         json.dump(deployment_config, f, indent=4)
         
-    print(f"✅ Pipeline Complete. Best RMSE Score: {score:.4f}")
-    print(f"📂 Artifacts saved successfully:\n  - {model_save_path}\n  - {config_save_path}")
+    print(f" Pipeline Complete. Best RMSE Score: {score:.4f}")
+    print(f" Artifacts saved successfully:\n  - {model_save_path}\n  - {config_save_path}")
 
     # 7. Final Verification (Testing the saved model)
     _ = test_saved_model(model_save_path, study.best_params, input_state, X_test, y_test)
@@ -78,6 +80,7 @@ if __name__ == "__main__":
     parser.add_argument("--target", type=str, required=True, help="Target column name")
     parser.add_argument("--use_case", type=str, required=True, help="Description of the use case")
     parser.add_argument("--req", type=str, required=True, help="User constraints and requirements")
+    parser.add_argument("--sub_id", type=str, required=True, help="SubmissionId")
     
     args = parser.parse_args()
     
@@ -86,5 +89,6 @@ if __name__ == "__main__":
         csv_path=args.csv_path, 
         target=args.target, 
         use_case=args.use_case, 
-        user_req=args.req
+        user_req=args.req,
+        sub_id=args.sub_id
     )

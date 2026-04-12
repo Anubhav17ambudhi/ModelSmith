@@ -12,9 +12,11 @@ class SubmissionModel(BaseModel):
     status: str = Field(default="pending") # pending, training, completed, failed
     model_artifact: Optional[bytes] = None
     model_config_json: Optional[dict] = None
+    model_url: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
     model_config = {
         "populate_by_name": True,
-        "arbitrary_types_allowed": True
+        "arbitrary_types_allowed": True,
+        "collection": "submissions"
     }

@@ -1,10 +1,11 @@
 import streamlit as st
 import requests
-
-API_URL = "http://localhost:8000"
-
+import os
+from dotenv import load_dotenv
 st.set_page_config(page_title="Dataset Hub", page_icon="🚀", layout="wide")
 
+load_dotenv()
+API_URL=os.getenv('API_URL')
 # Custom CSS for Premium Look
 st.markdown("""
 <style>

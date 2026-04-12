@@ -10,6 +10,7 @@ from app.schemas.submission_schema import SubmissionResponse
 from app.utils.pipeline import SmartAutoPipeline
 from app.config import settings
 
+
 # Configure Cloudinary globally
 cloudinary.config(
     cloud_name=settings.CLOUDINARY_CLOUD_NAME,
@@ -65,11 +66,13 @@ class SubmissionService:
             
         # 3. Upload to Cloudinary
         try:
+            
             upload_result = cloudinary.uploader.upload(
-                file_content_to_upload, 
-                resource_type="raw", # raw is best for CSV/JSON files
+                io.BytesIO(file_content_to_upload), # Wrap in BytesIO
+                resource_type="raw", 
                 folder="user_datasets",
-                public_id=f"{user_id}_{file.filename}"
+                public_id=f"{user_id}_{file.filename.split('.')[0]}", # Avoid dots in public_id
+                format="csv" # Explicitly state the format
             )
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Cloudinary upload failed: {str(e)}")
