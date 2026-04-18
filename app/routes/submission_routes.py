@@ -47,6 +47,7 @@ async def get_my_submissions(
 async def trigger_training(
     submission_id: str, 
     #background_tasks: BackgroundTasks,
+    n_workers: int =1,
     current_user: dict = Depends(get_current_user),
     submission_service: SubmissionService = Depends(get_submission_service)
 ):
@@ -56,15 +57,16 @@ async def trigger_training(
         raise HTTPException(status_code=404, detail="Submission not found")
     if str(sub["user_id"]) != str(current_user["_id"]):
         raise HTTPException(status_code=403, detail="Not authorized")
-    
+ 
     celery_app.send_task(
-        "ModelTrainer.run_training",     # ← same string as name= above
+        "ModelTrainer.run_distributed_training",     # ← same string as name= above
         args=[
             submission_id,
             sub["dataset_url"],
             sub["target_column"],
             sub["use_case"],
-            sub["requirement"]
+            sub["requirement"],
+            n_workers
         ],
         queue="training_queue"
     )

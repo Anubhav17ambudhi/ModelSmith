@@ -17,12 +17,27 @@ from ML_Pipeline.PrepareDataset import prepare_datasets
 from OptunaOptimizer.MLP import create_objective
 from OptunaOptimizer.Train import train_and_evaluate_final_model
 from OptunaOptimizer.SaveModel import test_saved_model  # <--- NAYA IMPORT
+import time
+
+def call_with_retry(fn, *args, **kwargs):
+    for attempt in range(5):
+        try:
+            return fn(*args, **kwargs)
+        except Exception as e:
+            print(f"Actual error: {type(e).__name__}: {str(e)}")  # ← add this
+            if "429" in str(e) or "503" in str(e):
+                wait = 2 ** attempt
+                print(f"Rate limited, retrying in {wait}s...")
+                time.sleep(wait)
+            else:
+                raise e  # ← fail immediately on non-rate-limit errors
+    raise Exception("API failed after all retries")
 
 # .env file se API key load karne ke liye
 load_dotenv()
 sys.stdout.reconfigure(encoding='utf-8')
 
-def start_automl(csv_path, target, use_case, user_req,sub_id):
+def start_automl(csv_path, target, use_case, user_req,sub_id,n_trials=10,worker_id=0):
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         print("ERROR: GEMINI_API_KEY not found in .env file! Please add it.")
@@ -32,10 +47,8 @@ def start_automl(csv_path, target, use_case, user_req,sub_id):
     
     # 1. Input State Builder
     builder = InputStateBuilder(api_key=api_key)
-    input_state = builder.build(csv_path, use_case, user_req, target)
-    
-    # 2. Constraint Engine
-    final_space = run_constraint_engine(input_state, api_key)
+    input_state = call_with_retry(builder.build, csv_path, use_case, user_req, target)
+    final_space = call_with_retry(run_constraint_engine, input_state, api_key)
     
     # 3. Data Preparation
     X_train, X_val, X_test, y_train, y_val, y_test, scaler_y = prepare_datasets(csv_path, target)
@@ -43,7 +56,7 @@ def start_automl(csv_path, target, use_case, user_req,sub_id):
     # 4. Optuna Optimization
     objective = create_objective(X_train, y_train, X_val, y_val, input_state, final_space)
     study = optuna.create_study(direction=input_state["objective"]["optuna_direction"])
-    study.optimize(objective, n_trials=10) # Testing ke liye 10 trials
+    study.optimize(objective, n_trials=int(n_trials)) # Testing ke liye 10 trials
     
     # 5. Final Training
     model, score = train_and_evaluate_final_model(study.best_params, X_train, y_train, X_test, y_test, input_state)
@@ -51,8 +64,8 @@ def start_automl(csv_path, target, use_case, user_req,sub_id):
     # 6. Saving (Exporting artifacts)
     print("\nExporting Model Artifacts...")
     safe_name = target.replace(" ", "_").lower()
-    model_save_path = f"{sub_id}_best_model.pth"
-    config_save_path = f"{sub_id}_model_config.json"
+    model_save_path = f"{sub_id}_{worker_id}_best_model.pth"
+    config_save_path = f"{sub_id}_{worker_id}_model_config.json"
 
     # PyTorch weights save karein
     torch.save(model.state_dict(), model_save_path)
@@ -60,7 +73,8 @@ def start_automl(csv_path, target, use_case, user_req,sub_id):
     # Blueprint/Config save karein
     deployment_config = {
         "input_state": input_state,
-        "best_params": study.best_params
+        "best_params": study.best_params,
+        "best_score": score  
     }
     with open(config_save_path, "w") as f:
         json.dump(deployment_config, f, indent=4)
@@ -81,7 +95,8 @@ if __name__ == "__main__":
     parser.add_argument("--use_case", type=str, required=True, help="Description of the use case")
     parser.add_argument("--req", type=str, required=True, help="User constraints and requirements")
     parser.add_argument("--sub_id", type=str, required=True, help="SubmissionId")
-    
+    parser.add_argument("--n_trials", type=str, default='10')
+    parser.add_argument("--worker_id", type=str, default="worker_0")
     args = parser.parse_args()
     
     # Ab data command line se aayega, hardcoded nahi
@@ -90,5 +105,8 @@ if __name__ == "__main__":
         target=args.target, 
         use_case=args.use_case, 
         user_req=args.req,
-        sub_id=args.sub_id
+        sub_id=args.sub_id,
+        n_trials=args.n_trials,
+        worker_id=args.worker_id
+
     )

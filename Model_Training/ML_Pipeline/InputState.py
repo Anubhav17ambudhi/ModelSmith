@@ -4,7 +4,7 @@ import json
 import numpy as np
 import pandas as pd
 from typing import Dict, Any, Optional
-import google.generativeai as genai
+from google import genai
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
@@ -21,8 +21,7 @@ class InputStateBuilder:
         key = api_key or os.getenv("GEMINI_API_KEY")
         if not key:
             raise ValueError("Missing GEMINI_API_KEY")
-        genai.configure(api_key=key.strip())
-        self.model = genai.GenerativeModel(self.GEMINI_MODEL)
+        self.client = genai.Client(api_key=key.strip())
 
     # =========================
     # DATE COLUMN DETECTION
@@ -210,7 +209,7 @@ class InputStateBuilder:
     }}
     """
         try:
-            res = self.model.generate_content(prompt)
+            res = self.client.models.generate_content(model=self.GEMINI_MODEL, contents=prompt)
             text = res.text.strip()
             start = text.find("{")
             end = text.rfind("}") + 1

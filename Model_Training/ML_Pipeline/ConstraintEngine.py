@@ -1,13 +1,12 @@
 import json
-import google.generativeai as genai
+from google import genai
 
 # =============================================================================
 # MODULE 2: CONSTRAINT ENGINE
 # =============================================================================
 
 def run_constraint_engine(state, api_key):
-    genai.configure(api_key=api_key.strip())
-    model = genai.GenerativeModel("gemini-2.5-flash") 
+    client = genai.Client(api_key=api_key.strip())
 
     input_state_str = json.dumps(state, indent=2)
 
@@ -56,7 +55,7 @@ Must be a completely FLAT dictionary inside "search_space". NO NESTING of layers
 Only use valid keys: "type", "low", "high", "choices", "log". NEVER use "_type" or "_low".
 """
 
-    response = model.generate_content(prompt)
+    response = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
     text = response.text.strip()
 
     # =========================

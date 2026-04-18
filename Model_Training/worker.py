@@ -1,4 +1,4 @@
-from celery import Celery
+from celery import Celery, group, chord
 from config import settings
 from db import mark_training, mark_completed, mark_failed
 import cloudinary, cloudinary.uploader
@@ -26,6 +26,12 @@ celery_app.conf.update(
     #key-naming
     result_key_prefix="result:",
     task_default_queue="training_queue",
+    broker_connection_retry_on_startup=True,
+    broker_connection_retry=True,
+    broker_connection_max_retries=10,
+    redis_socket_keepalive=True,
+    redis_socket_timeout=300,        # 5 minutes
+    redis_retry_on_timeout=True,
 )
 
 def download_file(url, path):
@@ -40,10 +46,10 @@ def download_file(url, path):
         f.write(response.content)
 
 @celery_app.task(name="ModelTrainer.run_training")
-def run_training_task(submission_id, csv_url, target, use_case, requirement):
+def run_training_task(submission_id, csv_url, target, use_case, requirement,n_trials,worker_id):
     local_csv = f"{submission_id}.csv"
-    model_path = f"{submission_id}_best_model.pth"
-    config_path = f"{submission_id}_model_config.json"
+    model_path = f"{submission_id}_{worker_id}_best_model.pth"
+    config_path = f"{submission_id}_{worker_id}_model_config.json"
     
     try:
         mark_training(submission_id)        
@@ -55,12 +61,13 @@ def run_training_task(submission_id, csv_url, target, use_case, requirement):
             "--target", target,
             "--use_case", use_case,
             "--req", requirement,
-            "--sub_id", submission_id       # main.py uses this for output filenames
+            "--sub_id", submission_id,  
+            "--n_trials", str(n_trials),
+            "--worker_id", worker_id  # main.py uses this for output filenames
         ], capture_output=True, text=True, encoding="utf-8" )
         print("STDOUT:", process.stdout)
         print("STDERR:", process.stderr)
         if process.returncode != 0:
-            mark_failed(submission_id)
             raise Exception(f"Training script failed:\n{process.stderr}")
 
         with open(model_path, "rb") as f:
@@ -68,14 +75,41 @@ def run_training_task(submission_id, csv_url, target, use_case, requirement):
             print("UPLOAD RESULT:", upload_result)
         with open(config_path, "r") as f:
             config_dict = json.load(f)
-        print("Marking completed with URL:", upload_result.get("secure_url"))
-        mark_completed(submission_id, upload_result["secure_url"], config_dict)
-
+        return {
+            "score": config_dict["best_score"],  # whatever key your config stores RMSE in
+            "model_url": upload_result["secure_url"],
+            "worker_id": worker_id
+        }
     except Exception as e:
         print(f"Training failed: {e}")
-        mark_failed(submission_id)
         raise e   
 
     finally:
         for f in [local_csv, model_path, config_path]:
             if os.path.exists(f): os.remove(f)
+
+@celery_app.task(name="ModelTrainer.aggregate_results")
+def aggregate_results(worker_results, submission_id):
+    try:
+        valid = [r for r in worker_results if r is not None]
+        if not valid:
+            mark_failed(submission_id)
+            return
+        best = min(valid, key=lambda x: x["score"])
+        mark_completed(submission_id, best["model_url"], {"best_score": best["score"]})
+    except Exception as e:
+        mark_failed(submission_id)
+        raise e
+    
+@celery_app.task(name="ModelTrainer.run_distributed_training")
+def run_distributed_training(submission_id, csv_url, target, use_case, requirement, n_workers):
+    mark_training(submission_id)
+
+    trials_each = 20 // n_workers  # 3,3,3,1 — adjust as needed
+
+    chord(
+        group([
+            run_training_task.s(submission_id, csv_url, target, use_case, requirement, trials_each, str(i))
+            for i in range(n_workers)
+        ])
+    )(aggregate_results.s(submission_id))

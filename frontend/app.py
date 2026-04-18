@@ -160,30 +160,42 @@ else:
                             st.write(f"**Dataset URL:** [Download Data]({sub['dataset_url']})")
                             st.write(f"**Submitted At:** {sub['created_at']}")
                             
-                            if status in ['pending', 'failed']:
+                            if status in ['pending', 'failed', 'completed', 'training']:
+                                n_workers = st.selectbox(
+                                    "Number of Workers", 
+                                    options=[1, 2, 5, 10],
+                                    key=f"workers_{sub_id}"
+                                )
                                 if st.button("🚀 Train Model", key=f"train_{sub_id}"):
-                                    t_res = requests.post(f"{API_URL}/submit/{sub_id}/train", headers=get_headers())
+                                    t_res = requests.post(
+                                        f"{API_URL}/submit/{sub_id}/train?n_workers={n_workers}",
+                                        headers=get_headers()
+                                    )
                                     if t_res.status_code == 200:
                                         st.success("Training started in the background! Please refresh the page in a few minutes.")
                                     else:
                                         st.error(f"Error starting training: {t_res.text}")
-                            
-                            elif status == 'training':
-                                st.info("⏳ Model is currently training...")
+                                        
+                                if status == 'completed':
+                                    st.success("✅ Training Completed")
+                                    d_res = requests.get(f"{API_URL}/submit/{sub_id}/download", headers=get_headers())
+                                    if d_res.status_code == 200:
+                                        st.download_button(
+                                            label="📦 Download Trained Model & Config ZIP",
+                                            data=d_res.content,
+                                            file_name=f"{sub['target_column'].replace(' ', '_').lower()}_artifacts.zip",
+                                            mime="application/zip",
+                                            key=f"download_{sub_id}"
+                                        )
+                                    else:
+                                        st.error("Model artifacts not available right now.")
+
+                                if status == 'training':
+                                    st.info("⏳ Model is currently training...")
                                 
-                            elif status == 'completed':
-                                st.success("✅ Training Completed")
-                                d_res = requests.get(f"{API_URL}/submit/{sub_id}/download", headers=get_headers())
-                                if d_res.status_code == 200:
-                                    st.download_button(
-                                        label="📦 Download Trained Model & Config ZIP",
-                                        data=d_res.content,
-                                        file_name=f"{sub['target_column'].replace(' ', '_').lower()}_artifacts.zip",
-                                        mime="application/zip",
-                                        key=f"download_{sub_id}"
-                                    )
-                                else:
-                                    st.error("Model artifacts not available right now.")
+                            
+                                
+                           
             else:
                 st.error("Failed to load submissions.")
         except requests.exceptions.ConnectionError:
