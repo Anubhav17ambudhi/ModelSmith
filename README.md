@@ -21,10 +21,6 @@ You upload a CSV, tell ModelSmith what you want to predict, and it handles the r
 
 ## Demo
 
-> 🚀 Live demo: [modelsmith.app](https://modelsmith.app) *(add your deployment URL here)*
-
-![ModelSmith workflow](docs/demo.gif) *(add a screen recording)*
-
 ---
 
 ## Key Features
@@ -43,22 +39,22 @@ You upload a CSV, tell ModelSmith what you want to predict, and it handles the r
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                  React Frontend (app/)               │
+│                  React Frontend (app/)              │
 │   CSV Upload → Column Selector → Training Status    │
 └───────────────────────┬─────────────────────────────┘
                         │ REST API
 ┌───────────────────────▼─────────────────────────────┐
-│              FastAPI Backend (app/api/)              │
+│              FastAPI Backend (app/api/)             │
 │   /upload  →  /clean  →  /train  →  /download       │
-└──────┬──────────────────────────┬────────────────────┘
+└──────┬──────────────────────────┬───────────────────┘
        │                          │
 ┌──────▼──────────┐    ┌──────────▼──────────────────┐
-│ data-cleaner-api│    │   Model_Training/            │
-│ (Flask service) │    │   auto_trainer.py            │
-│                 │    │   - GridSearchCV             │
-│ - Null handling │    │   - Cross-validation         │
-│ - Encoding      │    │   - Model serialization      │
-│ - Normalization │    │   - Report generation        │
+│ data-cleaner-api│    │   Model_Training/           │
+│ (Flask service) │    │   auto_trainer.py           │
+│                 │    │   - GridSearchCV            │
+│ - Null handling │    │   - Cross-validation        │
+│ - Encoding      │    │   - Model serialization     │
+│ - Normalization │    │   - Report generation       │
 └─────────────────┘    └─────────────────────────────┘
 ```
 
@@ -192,8 +188,13 @@ Pull requests are welcome. For major changes, please open an issue first.
 
 ## Authors
 
+- **Anubhav Ambudhi** — 
+- **Vivek Kumar** — [@Anubhav17ambudhi](https://github.com/Anubhav17ambudhi)
+- **Vivekanand Pandey** — [@Anubhav17ambudhi](https://github.com/Anubhav17ambudhi)
+- **Ruchir Tripathi** — [@Anubhav17ambudhi](https://github.com/Anubhav17ambudhi)
+- **Waquar Ahmad** — [@Anubhav17ambudhi](https://github.com/Anubhav17ambudhi)
+- **Yogesh Dixit** — [@Anubhav17ambudhi](https://github.com/Anubhav17ambudhi)
 - **Anubhav Ambudhi** — [@Anubhav17ambudhi](https://github.com/Anubhav17ambudhi)
-- *(add collaborators)*
 
 ---
 
