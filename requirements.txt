@@ -3,4 +3,11 @@ numpy
 scikit-learn
 torch
 optuna
-google-generativeai
+google-generativeaicelery
+pydantic-settings
+motor
+pymongo
+cloudinary
+requests
+certifi
+fastapi

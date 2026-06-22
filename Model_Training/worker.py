@@ -1,9 +1,8 @@
 from celery import Celery
-from config import settings
+from app.config import settings
 from db import mark_training, mark_completed, mark_failed
 import cloudinary, cloudinary.uploader
 import os, json, subprocess, sys, urllib.request,certifi,requests
-from config import settings
 
 # Configure Cloudinary globally
 cloudinary.config(
