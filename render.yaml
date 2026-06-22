@@ -53,10 +53,7 @@ services:
     startCommand: streamlit run frontend/app.py --server.port $PORT --server.address 0.0.0.0
     envVars:
       - key: API_URL
-        fromService:
-          type: web
-          name: modelsmith-backend
-          property: url
+        value: https://modelsmith-backend.onrender.com
 
   # Managed Redis Instance
   - type: redis
