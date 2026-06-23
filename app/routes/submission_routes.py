@@ -3,7 +3,7 @@ from app.schemas.submission_schema import SubmissionResponse
 from app.services.submission_service import SubmissionService
 from app.database.mongodb import get_database
 from app.utils.dependencies import get_current_user
-from app.celery_config import celery_app
+from Model_Training.worker import run_training_task
 import os, json,io
 import zipfile
 router = APIRouter()
@@ -46,7 +46,7 @@ async def get_my_submissions(
 @router.post("/{submission_id}/train")
 async def trigger_training(
     submission_id: str, 
-    #background_tasks: BackgroundTasks,
+    background_tasks: BackgroundTasks,
     current_user: dict = Depends(get_current_user),
     submission_service: SubmissionService = Depends(get_submission_service)
 ):
@@ -57,16 +57,13 @@ async def trigger_training(
     if str(sub["user_id"]) != str(current_user["_id"]):
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    celery_app.send_task(
-        "ModelTrainer.run_training",     # ← same string as name= above
-        args=[
-            submission_id,
-            sub["dataset_url"],
-            sub["target_column"],
-            sub["use_case"],
-            sub["requirement"]
-        ],
-        queue="training_queue"
+    background_tasks.add_task(
+        run_training_task,
+        submission_id,
+        sub["dataset_url"],
+        sub["target_column"],
+        sub["use_case"],
+        sub["requirement"]
     )
     
     return {"message": "Training queued"}

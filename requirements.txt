@@ -3,7 +3,6 @@ numpy
 scikit-learn
 torch
 optuna
-google-generativeaicelery
 pydantic-settings
 motor
 pymongo

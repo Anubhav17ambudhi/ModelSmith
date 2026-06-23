@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Start the Celery worker in the background
-celery -A Model_Training.worker celery_app worker --loglevel=info &
+# Start the FastAPI backend internally
+uvicorn app.main:app --host 127.0.0.1 --port 8000 &
 
-# Start the FastAPI backend
-uvicorn app.main:app --host 0.0.0.0 --port $PORT
+# Start the Streamlit frontend publicly
+streamlit run frontend/app.py --server.port $PORT --server.address 0.0.0.0

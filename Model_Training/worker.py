@@ -1,4 +1,3 @@
-from celery import Celery
 from app.config import settings
 from db import mark_training, mark_completed, mark_failed
 import cloudinary, cloudinary.uploader
@@ -9,22 +8,6 @@ cloudinary.config(
     cloud_name=settings.CLOUDINARY_CLOUD_NAME,
     api_key=settings.CLOUDINARY_API_KEY,
     api_secret=settings.CLOUDINARY_API_SECRET
-)
-
-
-celery_app = Celery(
-    "ModelTrainer",
-    broker=settings.REDIS_URL,
-    backend=settings.REDIS_URL
-)
-
-celery_app.conf.update(
-    task_serializer="json",
-    result_serializer="json",
-    accept_content=["json"],
-    #key-naming
-    result_key_prefix="result:",
-    task_default_queue="training_queue",
 )
 
 def download_file(url, path):
@@ -38,7 +21,6 @@ def download_file(url, path):
     with open(path, "wb") as f:
         f.write(response.content)
 
-@celery_app.task(name="ModelTrainer.run_training")
 def run_training_task(submission_id, csv_url, target, use_case, requirement):
     local_csv = f"{submission_id}.csv"
     model_path = f"{submission_id}_best_model.pth"
