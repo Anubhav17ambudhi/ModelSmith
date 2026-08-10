@@ -188,7 +188,8 @@ Pull requests are welcome. For major changes, please open an issue first.
 
 ## Authors
 
-- **Anubhav Ambudhi** — 
+- **Anubhav Ambudhi** —
+- **Vishal Kumar Gaud** - [@vishalkumar-09](https://github.com/vishalkumar-09)
 - **Vivek Kumar** — [@Anubhav17ambudhi](https://github.com/Anubhav17ambudhi)
 - **Vivekanand Pandey** — [@Anubhav17ambudhi](https://github.com/Anubhav17ambudhi)
 - **Ruchir Tripathi** — [@Anubhav17ambudhi](https://github.com/Anubhav17ambudhi)
